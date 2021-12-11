@@ -70,7 +70,7 @@ Titled window with hidden title:
 
 Non-titled window with custom frame:
 
-<img src="nontitledwindow.png" width=480 />
+<img src="nontitledwindow.png" width=526 />
 
 ### 4. _setPreventsActivation
 
