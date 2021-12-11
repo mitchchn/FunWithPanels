@@ -13,9 +13,9 @@ Generally you want this to be NSWindow, but a real NSPanel is included for compa
 
 ### 2. Swizzle Type
 
- Swizzle the window to apply properties which will make it non-activating and able to appear over fullscreen apps. Two forms of swizzling are implemented, method and class:
+Some properties which make a window behave like a panel are ignored if set on NSWindow, but we can swizzle the window to apply them anyway. Two forms of swizzling are implemented, method and class:
  
--  **Method swizzling** exchanges some computed properties on the NSWindow with our own custom implementations. This affects all instances of NSWindow, so we set an associated object on our panel window so the property getters know whether or not to apply custom behaviour.
+-  **Method swizzling** exchanges computed properties on NSWindow with our own versions. This exchange affects _all_ instances of NSWindow, so we set an associated object on our panel window to make it possible for the property getters to know whether or not to apply the custom behaviour.
 
 ```swift
 extension NSWindow {
@@ -30,6 +30,7 @@ extension NSWindow {
     }
 }
 
+// Exchange properties
 let styleMaskOriginal = class_getInstanceMethod(NSWindow.self, #selector(getter: NSWindow.styleMask))
 let styleMaskNew = class_getInstanceMethod(NSWindow.self, #selector(getter: NSWindow.nonActivatingStyleMask))
 method_exchangeImplementations(styleMaskOriginal!, styleMaskNew!)
@@ -39,7 +40,7 @@ objc_setAssociatedObject(window, &NonActivatingHandle, true, .OBJC_ASSOCIATION_C
 
 ```
 
-- **Class swizzling* is both a bit simpler and potentially more invasive. It converts the panel window to our own subclass with overriden properties. No other windows are affected and no associated object is required, but if our window was originally a different subclass of NSWindow, it may run into trouble.
+- **Class swizzling** is both a bit simpler and potentially more invasive. It converts the panel window to our own subclass with overriden properties. No other windows are affected and no associated object is required, but our window may run into trouble if it was originally a different subclass of NSWindow.
 
 ```swift
 class NonactivatingWindow: NSWindow {
@@ -57,11 +58,19 @@ object_setClass(window, NonactivatingWindow.self)
 ```
 ### 3. Remove titlebar from view
 
-Normal windows (including NSPanel) have a titlebar view, even if it is completely hidden. The titlebar area provides a drag region and is also responsible for drawing the window border and shadow. But it poses a problem for us, because clicking into it can activate the app even after swizzling the window.
+Normal windows (including NSPanel) have a titlebar area, even if it is completely hidden. The titlebar area provides a drag region and is also responsible for drawing the window border and shadow. But it poses a problem for us, because clicking into it can activate the app even after swizzling the window.
 
 We can remove the titlebar forcefully with `styleMask.remove(.titled)`, but this requires us to recreate a custom window border and frame. The result won't look or work exactly the same as a titled window. (Compare Alfred, which does not use a titled panel, with Spotlight, which does.)
 
 More importantly, removing the titlebar from an existing window may break any code which expects it to exist.
+
+Titled window with hidden title:
+
+<img src="titledwindow.png" width=480 />
+
+Non-titled window with custom frame:
+
+<img src="nontitledwindow.png" width=480 />
 
 ### 4. _setPreventsActivation
 
